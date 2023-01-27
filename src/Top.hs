@@ -17,14 +17,18 @@ main = do
   print (eval env0 sam)
   let sam2 = Add (Let "x" (Lit 1) (Add (Var "x") (Var "x"))) (Var "x")
   print (eval env0 sam2)
-  let sam3 = Let "f" (Lambda "n" (Add (Var "n") (Lit 5))) (Application (Var "f") (Lit 1))
+  -- let sam3 = Let "f" (Lambda "n" (Add (Var "n") (Lit 5))) (Application (Var "f") (Lit 1))
+  -- print (eval env0 sam3)
+  let sam3 = Let "hw" (Concat (LitS "hello, ") (LitS "world")) (Concat (Var "hw") (LitS "!!"))
+  print sam3
+  print (eval env0 sam3)
 
 
 -- represent Env using Maps
 data Env = Env (Map Identifier Value)
 
 env0 :: Env
-env0 = Env (Map.fromList [("x",100)])
+env0 = Env (Map.fromList [("x", VI 100)])
 
 extend :: Env -> Identifier -> Value -> Env
 extend (Env m) id value =
@@ -52,28 +56,56 @@ lookup (EnvCC f) x = f x
 -}
 
 
-type Value = Int
+data Value = VI Int | VS String
 type Identifier = String
 
 eval :: Env -> Exp -> Value
 eval env = \case
-  Lit n -> n
+  Lit n -> VI n
+  LitS s -> VS s
   Var x -> lookup env x
-  Add l r -> eval env l + eval env r
+  Add l r -> addV (eval env l) (eval env r)
+  Concat l r -> concatV (eval env l) (eval env r)
   Let name rhs body -> eval (extend env name (eval env rhs)) body
+
+addV :: Value -> Value -> Value
+addV v1 v2 = VI (getI v1 + getI v2)
+
+getI :: Value -> Int
+getI = \case
+  VI i -> i
+  v -> error (show ("getI failed", v))
+
+concatV :: Value -> Value -> Value
+concatV v1 v2 = VS (getS v1 ++ getS v2)
+
+getS :: Value -> String
+getS = \case
+  VS s -> s
+  v -> error (show ("getS failed", v))
 
 data Exp
   = Lit Int
+  | LitS String
   | Var Identifier
   | Add Exp Exp
+  | Concat Exp Exp
   | Let { name :: Identifier, rhs :: Exp, body :: Exp }
-  | Lambda Identifier Exp
-  | Application Exp Exp
+  -- | Lambda Identifier Exp
+  -- | Application Exp Exp
 
 instance Show Exp where
   show :: Exp -> String
   show = \case
     Lit n -> show n
+    LitS s -> show s
     Var x -> x
     Add l r -> "(" ++ show l ++ "+" ++ show r ++ ")"
-    Let _name _rhs _body -> "ebc todo"
+    Concat l r -> "(" ++ show l ++ " ++ " ++ show r ++ ")"
+    Let name rhs body -> "(let " ++ name ++ " = " ++ show rhs ++ " in " ++ show body ++ ")"
+
+instance Show Value where
+  show :: Value -> String
+  show = \case
+    VI i -> show i
+    VS s -> show s
