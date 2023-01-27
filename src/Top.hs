@@ -23,6 +23,10 @@ main = do
   print sam3
   print (eval env0 sam3)
 
+  let sam4 = Let "double" (Lam "x" (Add (Var "x") (Var "x"))) (App (Var "double") (Lit 5))
+  print sam4
+  print (eval env0 sam4)
+
 
 -- represent Env using Maps
 data Env = Env (Map Identifier Value)
@@ -56,7 +60,7 @@ lookup (EnvCC f) x = f x
 -}
 
 
-data Value = VI Int | VS String
+data Value = VI Int | VS String | VF deriving (Show)
 type Identifier = String
 
 eval :: Env -> Exp -> Value
@@ -67,6 +71,11 @@ eval env = \case
   Add l r -> addV (eval env l) (eval env r)
   Concat l r -> concatV (eval env l) (eval env r)
   Let name rhs body -> eval (extend env name (eval env rhs)) body
+  App l r -> apply (eval env l) (eval env r)
+  Lam {} -> undefined -- ???? will need a way to create bidnigns in the env
+
+apply :: Value -> Value -> Value
+apply = undefined
 
 addV :: Value -> Value -> Value
 addV v1 v2 = VI (getI v1 + getI v2)
@@ -91,8 +100,8 @@ data Exp
   | Add Exp Exp
   | Concat Exp Exp
   | Let { name :: Identifier, rhs :: Exp, body :: Exp }
-  -- | Lambda Identifier Exp
-  -- | Application Exp Exp
+  | Lam Identifier Exp
+  | App Exp Exp
 
 instance Show Exp where
   show :: Exp -> String
@@ -103,9 +112,11 @@ instance Show Exp where
     Add l r -> "(" ++ show l ++ "+" ++ show r ++ ")"
     Concat l r -> "(" ++ show l ++ " ++ " ++ show r ++ ")"
     Let name rhs body -> "(let " ++ name ++ " = " ++ show rhs ++ " in " ++ show body ++ ")"
+    App l r -> "(" ++ show l ++ " " ++ show r ++ ")"
+    Lam name body -> "(\\" ++ name ++ " -> " ++ show body ++ ")"
 
-instance Show Value where
-  show :: Value -> String
-  show = \case
-    VI i -> show i
-    VS s -> show s
+-- instance Show Value where
+--   show :: Value -> String
+--   show = \case
+--     VI i -> show i
+--     VS s -> show s
