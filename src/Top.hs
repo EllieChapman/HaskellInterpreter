@@ -6,12 +6,8 @@ import qualified Data.Map as Map (fromList,lookup,insert)
 import Data.Map (Map)
 
 
--- comment out labmda and appication
--- and built in that works on anothe rtype liek string, ie string_concat, and having literal strings
--- have program swhich can evaluate to a string and some to ints
 main :: IO ()
 main = do
-  --let sam = Add (Lit 1) (Add (Lit 2) (Lit 3))
   let sam = Add (Lit 1) (Add (Var "x") (Lit 3))
   print sam
   print (eval env0 sam)
@@ -28,8 +24,9 @@ main = do
   print (eval env0 sam4)
 
 
+
 -- represent Env using Maps
-data Env = Env (Map Identifier Value)
+data Env = Env (Map Identifier Value) deriving (Show)
 
 env0 :: Env
 env0 = Env (Map.fromList [("x", VI 100)])
@@ -60,7 +57,7 @@ lookup (EnvCC f) x = f x
 -}
 
 
-data Value = VI Int | VS String | VF deriving (Show)
+data Value = VI Int | VS String | VF Env Identifier Exp deriving (Show)
 type Identifier = String
 
 eval :: Env -> Exp -> Value
@@ -72,10 +69,14 @@ eval env = \case
   Concat l r -> concatV (eval env l) (eval env r)
   Let name rhs body -> eval (extend env name (eval env rhs)) body
   App l r -> apply (eval env l) (eval env r)
-  Lam {} -> undefined -- ???? will need a way to create bidnigns in the env
+  Lam x exp -> VF env x exp
 
 apply :: Value -> Value -> Value
-apply = undefined
+apply func arg = case func of
+  VF env x exp ->
+    eval (extend env x arg) exp
+  _ ->
+    error "apply: arg1 not a function!"
 
 addV :: Value -> Value -> Value
 addV v1 v2 = VI (getI v1 + getI v2)
